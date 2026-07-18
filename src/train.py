@@ -57,7 +57,9 @@ def load_qwen(model_id="Qwen/Qwen3.5-0.8B", device=None):
     base = AutoModel.from_pretrained(
         model_id, trust_remote_code=True,
         torch_dtype=torch.float16 if device != "cpu" else torch.float32,
-    ).to(device)
+        device_map=device if device != "cpu" else None,
+        low_cpu_mem_usage=True,
+    )
     base.eval()
     for p in base.parameters():
         p.requires_grad = False
