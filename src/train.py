@@ -255,3 +255,35 @@ def build_multi_window_texts(texts, t_all, stride=5):
             parts.append(texts[t - 2 * stride])
         multi.append(" | ".join(parts))
     return multi
+
+
+class LazyQwenEncoder:
+    """Lazy-loads Qwen only when encoding is actually needed (cache miss).
+    If cache hits, Qwen is never loaded — saves ~1.6 GB GPU memory.
+    """
+
+    def __init__(self, model_id="Qwen/Qwen3.5-0.8B", device=None):
+        self.model_id = model_id
+        self.device = device
+        self._model = None
+        self._tokenizer = None
+
+    @property
+    def model(self):
+        self._ensure_loaded()
+        return self._model
+
+    @property
+    def tokenizer(self):
+        self._ensure_loaded()
+        return self._tokenizer
+
+    def _ensure_loaded(self):
+        if self._model is None:
+            self._model, self._tokenizer = load_qwen(self.model_id, device=self.device)
+
+    def __call__(self, texts, batch_size=32):
+        self._ensure_loaded()
+        dev = self.device or "cuda" if torch.cuda.is_available() else "cpu"
+        return encode_texts_qwen(texts, self._model, self._tokenizer,
+                                 dev, batch_size=batch_size)
