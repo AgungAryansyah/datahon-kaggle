@@ -17,4 +17,5 @@ dependencies = [
     "xgboost>=2.1",
     "transformers>=4.45",
     "peft>=0.12",
+    "accelerate>=1.0",
 ]
