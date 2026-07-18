@@ -7,6 +7,19 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
 
+def select_device(gpu_id=0):
+    """Pick a specific GPU or fall back to CPU. Use gpu_id=None for CPU."""
+    if gpu_id is not None and torch.cuda.is_available():
+        if gpu_id < torch.cuda.device_count():
+            device = torch.device(f"cuda:{gpu_id}")
+            print(f"Device: {device} ({torch.cuda.get_device_name(gpu_id)})")
+            return device
+        print(f"GPU {gpu_id} not found ({torch.cuda.device_count()} available)")
+    device = torch.device("cpu")
+    print(f"Device: cpu")
+    return device
+
+
 def build_adj_tensor(adj_matrix):
     """Convert adjacency to normalized sparse-friendly dense tensor."""
     adj = torch.tensor(adj_matrix, dtype=torch.float32)
@@ -27,20 +40,19 @@ encode_texts = encode_texts_minilm  # backward compat (v1 notebooks)
 
 
 @torch.no_grad()
-def encode_texts_qwen(texts, model, tokenizer, device, batch_size=32, max_length=256):
-    """Pre-compute token-level embeddings with Qwen (or any HF model).
-
-    Uses last_hidden_state directly — no output_hidden_states overhead.
-    """
+def encode_texts_qwen(texts, model, tokenizer, device, batch_size=32, max_length=32):
+    """Pre-compute pooled text embeddings with Qwen. Returns (N, 1024)."""
     model.eval()
     embeddings = []
     for i in tqdm(range(0, len(texts), batch_size), desc="Qwen encoding", unit="batch"):
         batch = texts[i:i + batch_size]
-        inputs = tokenizer(batch, padding=True, truncation=True,
+        inputs = tokenizer(batch, padding="max_length", truncation=True,
                            max_length=max_length, return_tensors="pt").to(device)
         outputs = model(**inputs)
-        hidden = outputs.last_hidden_state  # (B, S, d_text)
-        embeddings.append(hidden.cpu().to(torch.float32).numpy())
+        hidden = outputs.last_hidden_state  # (B, L, 1024)
+        mask = inputs["attention_mask"].unsqueeze(-1).float()
+        pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)  # (B, 1024)
+        embeddings.append(pooled.cpu().to(torch.float32).numpy())
     return np.concatenate(embeddings, axis=0)
 
 
