@@ -104,6 +104,41 @@ def train_val_split(X, T, Y, val_frac=0.2):
     return X[:split], T_train, Y[:split], X[split:], T_val, Y[split:]
 
 
+def write_submission(predictions, label=""):
+    """Write predictions to a timestamped submission.csv.
+
+    Args:
+        predictions: (540, 3, 1260) float32 — speeds for each sample×horizon×road
+        label: optional tag appended to directory name
+    Returns:
+        Path to the written file.
+    """
+    import csv
+    from datetime import datetime
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    name = f"{ts}_{label}" if label else ts
+    out_dir = DATASET_DIR.parent / "submissions" / name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "submission.csv"
+
+    horizon_names = ["h5", "h10", "h15"]
+    with open(out_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["id", "speed"])
+        for s in range(540):
+            for hi, hn in enumerate(horizon_names):
+                for r in range(1260):
+                    writer.writerow([f"test_{s:05d}_{hn}_r{r}", f"{predictions[s, hi, r]:.6f}"])
+
+    expected_rows = 540 * 3 * 1260 + 1
+    with open(out_path) as f:
+        actual = sum(1 for _ in f)
+    assert actual == expected_rows, f"Row count mismatch: {actual} vs {expected_rows}"
+    print(f"Wrote {out_path} ({actual - 1} predictions)")
+    return out_path
+
+
 def build_features(hist_windows, adj, roads):
     """Vectorized feature extraction from history windows.
 
