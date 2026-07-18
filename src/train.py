@@ -196,6 +196,7 @@ def train_one_config(model, train_loader, val_loader, adj, device,
     for epoch in range(1, epochs + 1):
         final_epoch = epoch
         model.train()
+        train_loss = 0
         for Xb, Tb, Yb in train_loader:
             Xb, Tb, Yb = Xb.to(device), Tb.to(device), Yb.to(device)
             optimizer.zero_grad()
@@ -204,6 +205,8 @@ def train_one_config(model, train_loader, val_loader, adj, device,
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
+            train_loss += loss.item() * Xb.size(0)
+        train_loss /= len(train_loader.dataset)
 
         model.eval()
         val_loss = 0
@@ -214,6 +217,9 @@ def train_one_config(model, train_loader, val_loader, adj, device,
                 val_loss += ((pred - Yb) ** 2 * hw.view(1, 3, 1)).mean().item() * Xb.size(0)
         val_loss /= len(val_loader.dataset)
         scheduler.step(val_loss)
+
+        if verbose:
+            print(f"Epoch {epoch:3d} | train: {train_loss:.4f} | val: {val_loss:.4f}")
 
         if val_loss < best_val:
             best_val = val_loss
