@@ -174,17 +174,24 @@ def train_model(model, train_loader, val_loader, adj, device,
 
 
 def train_one_config(model, train_loader, val_loader, adj, device,
-                     epochs=50, lr=1e-3, patience=10, grad_clip=1.0, verbose=False):
-    """Train a single config, returning best val loss, param count, and epochs used."""
+                     epochs=50, lr=1e-3, patience=10, grad_clip=1.0,
+                     verbose=False, horizon_weights=None):
+    """Train a single config, returning best val loss, param count, and epochs used.
+
+    Args:
+        horizon_weights: optional (3,) tensor weighting h5, h10, h15 loss.
+    """
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=max(3, patience // 3),
     )
-    criterion = nn.MSELoss()
+    criterion = nn.MSELoss(reduction="none")
     best_val = float("inf")
     best_state = None
     patience_left = patience
     final_epoch = 0
+
+    hw = torch.tensor(horizon_weights, device=device) if horizon_weights else torch.ones(3, device=device)
 
     for epoch in range(1, epochs + 1):
         final_epoch = epoch
@@ -193,7 +200,7 @@ def train_one_config(model, train_loader, val_loader, adj, device,
             Xb, Tb, Yb = Xb.to(device), Tb.to(device), Yb.to(device)
             optimizer.zero_grad()
             pred = model(Xb, Tb, adj)
-            loss = criterion(pred, Yb)
+            loss = ((pred - Yb) ** 2 * hw.view(1, 3, 1)).mean()
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
@@ -203,7 +210,8 @@ def train_one_config(model, train_loader, val_loader, adj, device,
         with torch.no_grad():
             for Xb, Tb, Yb in val_loader:
                 Xb, Tb, Yb = Xb.to(device), Tb.to(device), Yb.to(device)
-                val_loss += criterion(model(Xb, Tb, adj), Yb).item() * Xb.size(0)
+                pred = model(Xb, Tb, adj)
+                val_loss += ((pred - Yb) ** 2 * hw.view(1, 3, 1)).mean().item() * Xb.size(0)
         val_loss /= len(val_loader.dataset)
         scheduler.step(val_loss)
 
@@ -219,3 +227,25 @@ def train_one_config(model, train_loader, val_loader, adj, device,
     model.load_state_dict(best_state)
     n_params = sum(p.numel() for p in model.parameters())
     return best_val, n_params, final_epoch
+
+
+def build_multi_window_texts(texts, t_all, stride=5):
+    """Build multi-window text strings: concatenate t, t-stride, t-2*stride.
+
+    Args:
+        texts: list of all text strings (aligned with speed timesteps)
+        t_all: array of timestep indices for each window (e.g. range(N))
+        stride: gap between text windows (default 5 steps = 20 min)
+
+    Returns:
+        list of combined text strings, one per window.
+    """
+    multi = []
+    for t in t_all:
+        parts = [texts[t]]
+        if t >= stride:
+            parts.append(texts[t - stride])
+        if t >= 2 * stride:
+            parts.append(texts[t - 2 * stride])
+        multi.append(" | ".join(parts))
+    return multi
