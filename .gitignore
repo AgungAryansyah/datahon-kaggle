@@ -11,3 +11,6 @@ wheels/
 
 # Dataset
 dataset-task1/
+
+# Submissions (keep dir, ignore CSVs)
+submissions/*/
