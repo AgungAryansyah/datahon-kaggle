@@ -23,6 +23,8 @@ def encode_texts_minilm(texts, model_name="all-MiniLM-L6-v2", batch_size=256):
     return model.encode(texts, batch_size=batch_size, show_progress_bar=True,
                         convert_to_numpy=True).astype(np.float32)
 
+encode_texts = encode_texts_minilm  # backward compat (v1 notebooks)
+
 
 @torch.no_grad()
 def encode_texts_qwen(texts, model, tokenizer, device, batch_size=32, max_length=256):
