@@ -236,6 +236,16 @@ CACHE_DIR = DATASET_DIR.parent / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 
+def _hash_texts(texts):
+    """Deterministic hash of text list for cache key."""
+    import hashlib
+    h = hashlib.sha256()
+    for t in texts[:100]:  # hash first 100 + length
+        h.update(t.encode())
+    h.update(str(len(texts)).encode())
+    return h.hexdigest()[:12]
+
+
 def cache_save(name, **arrays):
     """Save numpy arrays to cache. Use cache_load(name) to retrieve."""
     import pickle
@@ -256,3 +266,32 @@ def cache_load(name):
         return None
     with open(path, "rb") as f:
         return pickle.load(f)
+
+
+def cache_embeddings(texts_tr, texts_va, encoder_fn, cache_name, encoder_kwargs=None):
+    """Cache-aware encoding: recompute only if texts change.
+
+    Args:
+        texts_tr: list of training text strings
+        texts_va: list of validation text strings
+        encoder_fn: callable(list) -> np.ndarray (e.g., lambda texts: minilm.encode(...))
+        cache_name: str key for cache file
+        encoder_kwargs: passed through to encoder_fn if re-encoding needed
+    Returns:
+        (tr_emb, va_emb) numpy arrays
+    """
+    h = _hash_texts(texts_tr + texts_va)
+    full_name = f"{cache_name}_{h}"
+
+    cached = cache_load(full_name)
+    if cached is not None:
+        print(f"Loaded {full_name} from cache")
+        return cached["tr"], cached["va"]
+
+    if encoder_kwargs is None:
+        encoder_kwargs = {}
+    tr_emb = encoder_fn(texts_tr, **encoder_kwargs)
+    va_emb = encoder_fn(texts_va, **encoder_kwargs)
+
+    cache_save(full_name, tr=tr_emb, va=va_emb)
+    return tr_emb, va_emb
