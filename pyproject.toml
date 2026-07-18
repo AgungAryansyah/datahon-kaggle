@@ -1,7 +1,17 @@
 [project]
 name = "datathon-kaggle-task"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multimodal traffic speed prediction with GNN + event text"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "torch>=2.5",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "sentence-transformers>=3.0",
+    "scikit-learn>=1.5",
+    "matplotlib>=3.9",
+    "tqdm>=4.66",
+    "ipykernel>=6.29",
+    "jupyter>=1.1",
+]
