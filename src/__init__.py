@@ -104,24 +104,26 @@ def train_val_split(X, T, Y, val_frac=0.2):
     return X[:split], T_train, Y[:split], X[split:], T_val, Y[split:]
 
 
-def write_submission(predictions, label=""):
-    """Write predictions to a timestamped submission.csv.
+def write_submission(predictions, label="", models=None):
+    """Write predictions and optionally models to a timestamped run directory.
 
     Args:
-        predictions: (540, 3, 1260) float32 — speeds for each sample×horizon×road
+        predictions: (540, 3, 1260) float32
         label: optional tag appended to directory name
+        models: optional dict of {name: sklearn/xgboost model} to save alongside
     Returns:
-        Path to the written file.
+        Path to the run directory.
     """
     import csv
+    import pickle
     from datetime import datetime
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     name = f"{ts}_{label}" if label else ts
     out_dir = DATASET_DIR.parent / "submissions" / name
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "submission.csv"
 
+    out_path = out_dir / "submission.csv"
     horizon_names = ["h5", "h10", "h15"]
     with open(out_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -135,8 +137,15 @@ def write_submission(predictions, label=""):
     with open(out_path) as f:
         actual = sum(1 for _ in f)
     assert actual == expected_rows, f"Row count mismatch: {actual} vs {expected_rows}"
-    print(f"Wrote {out_path} ({actual - 1} predictions)")
-    return out_path
+
+    if models:
+        for name, model in models.items():
+            model_path = out_dir / f"model_{name}.pkl"
+            with open(model_path, "wb") as f:
+                pickle.dump(model, f)
+
+    print(f"Run saved to {out_dir}/ ({actual - 1} predictions" + (f", {len(models)} models" if models else "") + ")")
+    return out_dir
 
 
 def build_features(hist_windows, adj, roads):
