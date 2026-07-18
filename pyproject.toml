@@ -14,4 +14,5 @@ dependencies = [
     "tqdm>=4.66",
     "ipykernel>=6.29",
     "jupyter>=1.1",
+    "xgboost>=2.1",
 ]
