@@ -196,20 +196,20 @@ def build_features(hist_windows, adj, roads):
             hist_windows[:, 0, :],
         ],
         axis=-1,
-    )  # (N, R, 5)
+    )
 
-    mean_h = hist_windows.mean(axis=1)  # (N, R)
+    mean_h = hist_windows.mean(axis=1)
     std_h = hist_windows.std(axis=1)
     trend = hist_windows[:, -1, :] - hist_windows[:, 0, :]
 
     degrees = adj.sum(axis=1, keepdims=True).clip(min=1)
-    adj_norm = adj.astype(np.float32) / degrees.astype(np.float32)  # (R, R)
+    adj_norm = adj.astype(np.float32) / degrees.astype(np.float32)
 
-    last_step = hist_windows[:, -1, :]  # (N, R)
-    neighbor_last = last_step @ adj_norm.T  # (N, R)
+    last_step = hist_windows[:, -1, :]
+    neighbor_last = last_step @ adj_norm.T
 
     step_3 = hist_windows[:, -3, :]
-    neighbor_3 = step_3 @ adj_norm.T  # (N, R)
+    neighbor_3 = step_3 @ adj_norm.T
 
     feats = np.stack(
         [
@@ -227,6 +227,32 @@ def build_features(hist_windows, adj, roads):
             neighbor_3,
         ],
         axis=-1,
-    )  # (N, R, 12)
+    )
 
     return feats.reshape(-1, 12).astype(np.float32)
+
+
+CACHE_DIR = DATASET_DIR.parent / ".cache"
+CACHE_DIR.mkdir(exist_ok=True)
+
+
+def cache_save(name, **arrays):
+    """Save numpy arrays to cache. Use cache_load(name) to retrieve."""
+    import pickle
+
+    path = CACHE_DIR / f"{name}.pkl"
+    with open(path, "wb") as f:
+        pickle.dump(arrays, f)
+    sizes = {k: f"{v.shape} ({v.dtype})" for k, v in arrays.items()}
+    print(f"Cached {name}: {sizes}")
+
+
+def cache_load(name):
+    """Load cached arrays. Returns dict or None if cache missing."""
+    import pickle
+
+    path = CACHE_DIR / f"{name}.pkl"
+    if not path.exists():
+        return None
+    with open(path, "rb") as f:
+        return pickle.load(f)
