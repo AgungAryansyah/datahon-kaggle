@@ -295,3 +295,54 @@ def cache_embeddings(texts_tr, texts_va, encoder_fn, cache_name, encoder_kwargs=
 
     cache_save(full_name, tr=tr_emb, va=va_emb)
     return tr_emb, va_emb
+
+
+def build_entity_masks(texts):
+    """Build boolean entity mask (1260,) per text string indicating which roads
+    are mentioned in the text. Cached.
+
+    Matches Chinese road names to English event text via a direction + ring + road type mapping.
+    """
+    import hashlib
+    import re
+
+    roads = load_roads()
+
+    # Direction mapping: Chinese → English
+    DIR_MAP = {"东": "east", "西": "west", "南": "south", "北": "north", "中": "middle"}
+    RING_MAP = {"一环": "first ring", "二环": "second ring", "三环": "third ring",
+                 "四环": "fourth ring", "五环": "fifth ring", "六环": "sixth ring"}
+
+    road_names_en = []
+    for r_idx, road_segments in enumerate(roads):
+        for seg in road_segments:
+            name_cn = seg.get("roadName", "")
+            name_en = name_cn
+            for cn, en in DIR_MAP.items():
+                name_en = name_en.replace(cn, en + " ")
+            for cn, en in RING_MAP.items():
+                name_en = name_en.replace(cn, en + " ")
+            name_en = name_en.lower().replace("  ", " ").strip()
+            road_names_en.append((r_idx, name_en, name_cn))
+
+    h = hashlib.sha256()
+    for t in texts[:100]:
+        h.update(t.encode())
+    h.update(str(len(texts)).encode())
+    cache_key = f"entity_masks_{h.hexdigest()[:12]}"
+
+    cached = cache_load(cache_key)
+    if cached is not None:
+        return list(cached["masks"])
+
+    masks = []
+    for text in texts:
+        mask = np.zeros(1260, dtype=bool)
+        text_lower = " " + text.lower().replace(".", "").replace(",", "") + " "
+        for r_idx, name_en, name_cn in road_names_en:
+            if name_en and len(name_en) > 1 and name_en in text_lower:
+                mask[r_idx] = True
+        masks.append(mask)
+
+    cache_save(cache_key, masks=np.stack(masks, axis=0))
+    return masks
