@@ -17,3 +17,6 @@ submissions/*/
 
 # Cache
 .cache/
+
+# Environment
+.env
