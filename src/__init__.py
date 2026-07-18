@@ -88,3 +88,78 @@ def normalize(speeds, mean, std):
 
 def denormalize(speeds, mean, std):
     return speeds * std + mean
+
+
+def compute_mse(y_pred, y_true):
+    """MSE averaged over all elements. y_pred/y_true shape: (N, 3, 1260)."""
+    return np.mean((y_pred - y_true) ** 2)
+
+
+def train_val_split(X, T, Y, val_frac=0.2):
+    """Temporal split — last val_frac of windows for validation."""
+    n = len(X)
+    split = int(n * (1 - val_frac))
+    T_train = T[:split] if T is not None else None
+    T_val = T[split:] if T is not None else None
+    return X[:split], T_train, Y[:split], X[split:], T_val, Y[split:]
+
+
+def build_features(hist_windows, adj, roads):
+    """Vectorized feature extraction from history windows.
+
+    Args:
+        hist_windows: (N, 15, 1260) float32
+        adj:         (1260, 1260) int8 adjacency
+        roads:       list[1260] road metadata
+
+    Returns:
+        (N * 1260, 12) float32 feature matrix
+    """
+    N, T, R = hist_windows.shape
+
+    roadclass = np.array([roads[r][0].get("roadclass", 0) for r in range(R)], dtype=np.float32)
+    length = np.array([roads[r][0].get("length", 0) for r in range(R)], dtype=np.float32)
+
+    lags = np.stack(
+        [
+            hist_windows[:, -1, :],
+            hist_windows[:, -2, :],
+            hist_windows[:, -4, :],
+            hist_windows[:, -8, :],
+            hist_windows[:, 0, :],
+        ],
+        axis=-1,
+    )  # (N, R, 5)
+
+    mean_h = hist_windows.mean(axis=1)  # (N, R)
+    std_h = hist_windows.std(axis=1)
+    trend = hist_windows[:, -1, :] - hist_windows[:, 0, :]
+
+    degrees = adj.sum(axis=1, keepdims=True).clip(min=1)
+    adj_norm = adj.astype(np.float32) / degrees.astype(np.float32)  # (R, R)
+
+    last_step = hist_windows[:, -1, :]  # (N, R)
+    neighbor_last = last_step @ adj_norm.T  # (N, R)
+
+    step_3 = hist_windows[:, -3, :]
+    neighbor_3 = step_3 @ adj_norm.T  # (N, R)
+
+    feats = np.stack(
+        [
+            lags[:, :, 0],
+            lags[:, :, 1],
+            lags[:, :, 2],
+            lags[:, :, 3],
+            lags[:, :, 4],
+            mean_h,
+            std_h,
+            trend,
+            np.broadcast_to(roadclass, (N, R)),
+            np.broadcast_to(length, (N, R)),
+            neighbor_last,
+            neighbor_3,
+        ],
+        axis=-1,
+    )  # (N, R, 12)
+
+    return feats.reshape(-1, 12).astype(np.float32)
