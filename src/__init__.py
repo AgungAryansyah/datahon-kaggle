@@ -148,6 +148,29 @@ def write_submission(predictions, label="", models=None):
     return out_dir
 
 
+def validate_submission(submission_path):
+    """Check submission.csv matches sample_submission.csv in id set and order."""
+    import csv
+
+    sample_path = DATASET_DIR / "sample_submission.csv"
+    with open(sample_path) as f:
+        sample_ids = [row[0] for row in csv.reader(f)][1:]  # skip header
+
+    with open(submission_path) as f:
+        sub_ids = [row[0] for row in csv.reader(f)][1:]
+
+    if len(sub_ids) != len(sample_ids):
+        raise ValueError(f"Row count mismatch: {len(sub_ids)} vs {len(sample_ids)}")
+
+    mismatches = [(i, s, g) for i, (s, g) in enumerate(zip(sub_ids, sample_ids)) if s != g]
+    if mismatches:
+        for i, s, g in mismatches[:5]:
+            print(f"  Row {i+2}: got {s}, expected {g}")
+        raise ValueError(f"{len(mismatches)} id mismatches")
+
+    print(f"Validated: {len(sub_ids)} rows, all ids match sample_submission.csv")
+
+
 def build_features(hist_windows, adj, roads):
     """Vectorized feature extraction from history windows.
 
