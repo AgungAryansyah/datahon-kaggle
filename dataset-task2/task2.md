@@ -62,7 +62,7 @@ Given a navigator's current article and target article on Wikipedia, predict whi
 | 16 | **GAT (Veličković et al.)** | ICLR 2018 | Graph attention networks. | — |
 | 17 | **Node2Vec (Grover & Leskovec)** | KDD 2016 | Biased random walk node embeddings. | `10.1145/2939672.2939754` |
 
-**Consensus approach**: Build the Wikipedia link graph (119k edges from screenshots OCR). Encode nodes with Wikipedia2Vec + CLIP visual embeddings. Use a **GNN (GCN/GAT)** over the link graph to classify which neighbor is the next click, conditioned on current + target nodes via labeling trick. Alternatively, a **Transformer** that scores candidate links given the current+target context. For maximum accuracy, fuse visual (screenshots via CLIP) + textual (Wikipedia2Vec/titles) + categorical modalities.
+**Consensus approach**: Use the Wikispeedia link graph (119,880 edges, 100% overlap). Encode nodes with sentence-transformers (384d) + CLIP visual (512d) + Wikipedia2Vec (100d) + category multi-hot (129d) = 1125d combined. Use a **GNN (GCN/GAT)** over the link graph to classify which neighbor is the next click, conditioned on current + target nodes via labeling trick. Alternatively, a **Transformer** that scores candidate links given the current+target context. For maximum accuracy, fuse visual (screenshots via CLIP) + textual (Wikipedia2Vec/titles) + categorical modalities.
 
 ## Plan
 
@@ -71,10 +71,12 @@ Given a navigator's current article and target article on Wikipedia, predict whi
 - ✔ `task2/src/__init__.py`, `ocr.py`, `graph.py`, `model.py`, `train.py` — scaffolded
 
 ### Phase 2: EDA & OCR Pipeline
-- `01_eda.ipynb` — data loading, statistics, exploration
-- OCR extraction from 4604 screenshots → link adjacency
-- Article embeddings (Wikipedia2Vec + CLIP)
-- Category feature encoding
+- ✔ `01_eda.ipynb` — data loading, statistics, exploration, all features cached
+- ✔ Link graph from Wikispeedia (auto-downloads from SNAP if missing)
+- ✔ Article text embeddings (sentence-transformers all-MiniLM-L6-v2, 384d)
+- ✔ CLIP visual embeddings (openai/clip-vit-base-patch32, 512d from screenshots)
+- ✔ Wikipedia2Vec embeddings (enwiki_20180420_100d, 100d graph-aware)
+- ✔ Category feature encoding (129 cats, multi-hot)
 
 ### Phase 3: Baselines
 - Link text similarity (cosine between target & candidate link titles)
