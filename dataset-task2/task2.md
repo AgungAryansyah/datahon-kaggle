@@ -87,9 +87,13 @@ Given a navigator's current article and target article on Wikipedia, predict whi
 - ✔ Each saved as `submissions/<timestamp>_<model>/` (5 submissions)
 
 ### Phase 4: Deep Learning
-- GNN (GCN/GAT) on link graph with current+target conditioning
-- Transformer scoring model
-- Multimodal fusion (CLIP + Wikipedia2Vec)
+- ✔ `04_deep_learning.ipynb` — four architectures, self-contained:
+  - **MLP Scorer** (428K params) — multimodal features → 3-layer MLP → candidate score
+  - **GCN+GRETEL** (296K params) — 2-layer GCN with labeling trick (conditions on current/target)
+  - **GAT Scorer** (363K params) — 2-layer graph attention over link neighborhood
+  - **Transformer Scorer** (857K params) — self-attention over candidates + cross-attention with target
+- All models share a unified training loop and prediction function
+- Features: text (384d) + CLIP (512d) + Wiki2Vec (100d) + categories (129d) = up to 1125d
 
 ### Phase 5: Experiments & Submissions
 - Ablations: text-only vs visual-only vs fused
