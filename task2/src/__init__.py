@@ -5,8 +5,9 @@ import urllib.parse
 import pandas as pd
 import numpy as np
 
-DATA_DIR = Path("dataset-task2")
-CACHE_DIR = Path(".cache")
+_BASE = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = _BASE / "dataset-task2"
+CACHE_DIR = _BASE / ".cache"
 
 
 def load_articles() -> pd.DataFrame:
