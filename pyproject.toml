@@ -21,4 +21,6 @@ dependencies = [
     "pytesseract>=0.3.13",
     "opencv-python>=5.0.0.93",
     "easyocr>=1.7.2",
+    "seaborn>=0.13.2",
+    "wikipedia2vec>=2.0.0",
 ]
