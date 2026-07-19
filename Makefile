@@ -19,6 +19,7 @@ sync:
 		--exclude '*.pyc' --exclude '.ipynb_checkpoints' \
 		--exclude 'dataset-task1' --exclude 'dataset-task2/screenshots' \
 		--exclude 'dataset-task2/*.csv' --exclude 'dataset-task2/*.zip' \
+		--exclude 'submissions' \
 		./ $(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_ROOT)/
 	@echo "Synced to $(REMOTE_HOST):$(REMOTE_ROOT)/"
 
@@ -38,7 +39,8 @@ run-all:
 	@echo "All notebooks executed on $(REMOTE_HOST)"
 
 pull-submissions:
-	rsync -avz -e "$(RSYNC_SSH)" $(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_ROOT)/submissions/ ./submissions/
+	rsync -avz -e "$(RSYNC_SSH)" $(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_ROOT)/submissions/ ./submissions/ 2>/dev/null || true
+	rsync -avz -e "$(RSYNC_SSH)" $(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_ROOT)/task2/notebooks/submissions/ ./submissions/ 2>/dev/null || true
 	@echo "Pulled submissions to ./submissions/"
 
 ssh:
