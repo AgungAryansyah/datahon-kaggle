@@ -12,7 +12,8 @@ wheels/
 
 # Datasets (not committed - Kaggle data)
 dataset-task1/
-dataset-task2/
+dataset-task2/*
+!dataset-task2/wikispeedia_adj.pkl
 
 # Submissions (keep dir, ignore CSVs)
 submissions/
@@ -21,6 +22,7 @@ submissions/
 .cache/
 *.npy
 *.pkl
+!dataset-task2/wikispeedia_adj.pkl
 *.json
 *.pt
 *.pth

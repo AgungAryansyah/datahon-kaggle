@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import pickle
 import urllib.parse
+import urllib.request
 import pandas as pd
 import numpy as np
 
@@ -46,14 +47,16 @@ def load_or_build_adjacency() -> dict:
         if p.exists():
             with open(p, "rb") as f:
                 return pickle.load(f)
+    import tarfile, io
     title_to_id = build_title_to_id()
-    links = pd.read_csv(
-        "/tmp/wikispeedia_paths-and-graph/links.tsv",
-        sep="\t",
-        skiprows=14,
-        header=None,
-        names=["source", "target"],
-    )
+    url = "https://snap.stanford.edu/data/wikispeedia/wikispeedia_paths-and-graph.tar.gz"
+    print(f"Downloading Wikispeedia from {url} ...")
+    with urllib.request.urlopen(url) as resp:
+        with tarfile.open(fileobj=io.BytesIO(resp.read()), mode="r:gz") as tar:
+            f = tar.extractfile("wikispeedia_paths-and-graph/links.tsv")
+            content = f.read()
+    links = pd.read_csv(io.BytesIO(content), sep="\t", skiprows=14,
+                        header=None, names=["source", "target"])
     links["source_decoded"] = (
         links["source"].apply(lambda x: urllib.parse.unquote(x).replace("_", " ").strip())
     )
