@@ -79,10 +79,12 @@ Given a navigator's current article and target article on Wikipedia, predict whi
 - ✔ Category feature encoding (129 cats, multi-hot)
 
 ### Phase 3: Baselines
-- Link text similarity (cosine between target & candidate link titles)
-- Category overlap heuristic
-- XGBoost with engineered features
-- Each saved as `submissions/<timestamp>_<model>/`
+- ✔ Title similarity (cosine between target & candidate embeddings, 16.5%)
+- ✔ Category overlap heuristic (12.2%)
+- ✔ Most popular link per current article (62.5% train)
+- ✔ XGBoost with engineered features (~50% train acc)
+- ✔ Ensemble majority vote (20.8%)
+- ✔ Each saved as `submissions/<timestamp>_<model>/` (5 submissions)
 
 ### Phase 4: Deep Learning
 - GNN (GCN/GAT) on link graph with current+target conditioning
