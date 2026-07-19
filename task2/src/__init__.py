@@ -35,11 +35,17 @@ def build_title_to_id() -> dict:
     return dict(zip(arts["title"].str.strip(), arts["article_id"]))
 
 
+_ADJ_PATHS = [
+    CACHE_DIR / "wikispeedia_adj.pkl",
+    DATA_DIR / "wikispeedia_adj.pkl",
+]
+
+
 def load_or_build_adjacency() -> dict:
-    path = CACHE_DIR / "wikispeedia_adj.pkl"
-    if path.exists():
-        with open(path, "rb") as f:
-            return pickle.load(f)
+    for p in _ADJ_PATHS:
+        if p.exists():
+            with open(p, "rb") as f:
+                return pickle.load(f)
     title_to_id = build_title_to_id()
     links = pd.read_csv(
         "/tmp/wikispeedia_paths-and-graph/links.tsv",
@@ -64,7 +70,7 @@ def load_or_build_adjacency() -> dict:
         adj[row["source_id"]].append(row["target_id"])
     adj = {k: list(set(v)) for k, v in adj.items()}
     CACHE_DIR.mkdir(exist_ok=True)
-    with open(path, "wb") as f:
+    with open(_ADJ_PATHS[0], "wb") as f:
         pickle.dump(adj, f)
     return adj
 
