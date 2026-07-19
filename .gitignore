@@ -5,18 +5,34 @@ build/
 dist/
 wheels/
 *.egg-info
+.ipynb_checkpoints/
 
 # Virtual environments
 .venv
 
-# Dataset
+# Datasets (not committed - Kaggle data)
 dataset-task1/
+dataset-task2/
 
 # Submissions (keep dir, ignore CSVs)
-submissions/*/
+submissions/
 
-# Cache
+# Cache & generated data files
 .cache/
+*.npy
+*.pkl
+*.json
+*.pt
+*.pth
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
 
 # Environment
 .env
+
+# OS
+.DS_Store
+Thumbs.db
